@@ -4,19 +4,15 @@ using MarkdownCodeAggregator.Domain.Interfaces;
 
 namespace MarkdownCodeAggregator.Application.Services;
 
-public class CodeAggregatorService(ICodeAggregator codeAggregator, ITokenCounter tokenCounter, IFileSystem fileSystem) : ICodeAggregatorService
+public class CodeAggregatorService(ICodeAggregator codeAggregator) : ICodeAggregatorService
 {
-    public async Task<AggregationResult> AggregateCodeAsync(string sourceDirectory, string? excludeFile, Action<string, double>? progressCallback = null)
+    public async Task<AggregationResult> AggregateCodeAsync(string sourceDirectory, string outputDirectory,
+            string? excludeFilePath, Action<string, double>? progressCallback = null)
     {
-        var excludedFolders = await GetExcludedFoldersAsync(excludeFile);
-        var (aggregatedContent, fileCount) = await codeAggregator.AggregateCodeAsync(sourceDirectory, excludedFolders, progressCallback);
-        var tokenCount = tokenCounter.CountTokens(aggregatedContent);
-
-        return new AggregationResult(aggregatedContent, tokenCount, fileCount);
+        var (aggregatedContent, fileCount, totalTokens) = await codeAggregator.AggregateCodeAsync(sourceDirectory,
+                                                              outputDirectory,
+                                                              excludeFilePath,
+                                                              progressCallback);
+        return new AggregationResult(aggregatedContent, totalTokens, fileCount);
     }
-
-    private async Task<IEnumerable<string>> GetExcludedFoldersAsync(string? excludeFile) =>
-            !string.IsNullOrEmpty(excludeFile) && fileSystem.FileExists(excludeFile)
-                    ? (await fileSystem.ReadAllTextAsync(excludeFile)).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-                    : [];
 }

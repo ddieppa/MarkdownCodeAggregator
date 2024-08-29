@@ -7,12 +7,11 @@ public class MarkdownFormatter : IFormatter
 {
     public string FormatCode(CodeFile codeFile)
     {
-        var fileName = Path.GetFileName(codeFile.Path.Value);
+        var fileName = codeFile.Path.Value; // This is now the relative path
         var fileExtension = Path.GetExtension(fileName).TrimStart('.');
-
         return $"""
                 ## File: {fileName}
-
+                
                 ```{fileExtension}
                 {codeFile.Content}
                 ```

@@ -10,4 +10,8 @@
       <ProjectReference Include="..\MarkdownCodeAggregator.Domain\MarkdownCodeAggregator.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Serilog" Version="4.0.2-dev-02226" />
+    </ItemGroup>
+
 </Project>

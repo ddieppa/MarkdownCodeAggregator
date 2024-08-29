@@ -3,5 +3,9 @@
 
 public interface ICodeAggregator
 {
-    Task<(string Content, int FileCount)> AggregateCodeAsync(string sourceDirectory, IEnumerable<string> excludedFolders, Action<string, double>? progressCallback = null);
+    Task<(string Content, int FileCount, int TotalTokens)> AggregateCodeAsync(
+            string sourceDirectory,
+            string outputDirectory,
+            string? excludeFilePath,
+            Action<string, double>? progressCallback = null);
 }

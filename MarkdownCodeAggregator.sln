@@ -14,7 +14,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownCodeAggregator.Cons
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownCodeAggregator.Domain.Tests", "tests\MarkdownCodeAggregator.Domain.Tests\MarkdownCodeAggregator.Domain.Tests.csproj", "{0D7A7255-AD9D-41B0-BAB1-1539B18AECBD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1MarkdownCodeAggregator.Application.Tests", "tests\TestProject1MarkdownCodeAggregator.Application.Tests\TestProject1MarkdownCodeAggregator.Application.Tests.csproj", "{C6B2AFAA-9CF7-4FB9-8370-A039E1A4F0E4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownCodeAggregator.Application.Tests", "tests\MarkdownCodeAggregator.Application.Tests\MarkdownCodeAggregator.Application.Tests.csproj", "{C6B2AFAA-9CF7-4FB9-8370-A039E1A4F0E4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkdownCodeAggregator.Infrastructure.Tests", "tests\MarkdownCodeAggregator.Infrastructure.Tests\MarkdownCodeAggregator.Infrastructure.Tests.csproj", "{1EAB78FB-2899-4A35-B544-68E1CFA586AC}"
 EndProject
