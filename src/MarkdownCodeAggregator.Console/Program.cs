@@ -85,8 +85,22 @@ try
             {
                 if (AnsiConsole.Confirm("The output directory already exists. Do you want to clean it first?"))
                 {
-                    Directory.Delete(outputDirectory, true);
-                    Directory.CreateDirectory(outputDirectory);
+                    try
+                    {
+                        foreach (var file in Directory.GetFiles(outputDirectory))
+                        {
+                            File.Delete(file);
+                        }
+                        foreach (var dir in Directory.GetDirectories(outputDirectory))
+                        {
+                            Directory.Delete(dir, true);
+                        }
+                        AnsiConsole.MarkupLine("[green]Output directory cleaned successfully.[/]");
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[yellow]Warning:[/] Unable to clean the output directory completely. Some files or subdirectories may remain. Error: {ex.Message}");
+                    }
                 }
             }
             else
@@ -116,12 +130,32 @@ try
                     });
                 });
 
-            await fileSystem.WriteAllTextAsync(outputFile, result.AggregatedContent);
+            const int maxRetries = 3;
+            const int retryDelay = 1000; // 1 second
 
-            AnsiConsole.MarkupLine("[green]Aggregation complete![/]");
-            AnsiConsole.MarkupLine($"Total files processed: [blue]{result.FileCount}[/]");
-            AnsiConsole.MarkupLine($"Total tokens: [blue]{result.TokenCount}[/]");
-            AnsiConsole.MarkupLine($"Output file: [blue]{outputFile}[/]");
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    await fileSystem.WriteAllTextAsync(outputFile, result.AggregatedContent);
+                    AnsiConsole.MarkupLine("[green]Aggregation complete![/]");
+                    AnsiConsole.MarkupLine($"Total files processed: [blue]{result.FileCount}[/]");
+                    AnsiConsole.MarkupLine($"Total tokens: [blue]{result.TokenCount}[/]");
+                    AnsiConsole.MarkupLine($"Output file: [blue]{outputFile}[/]");
+                    break; // Success, exit the retry loop
+                }
+                catch (IOException ex) when (attempt < maxRetries)
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Warning:[/] Failed to write output file (attempt {attempt}). Retrying in 1 second. Error: {ex.Message}");
+                    await Task.Delay(retryDelay);
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLine($"[red]Error:[/] Failed to write output file. Error: {ex.Message}");
+                    Log.Error(ex, "Failed to write output file");
+                    break; // Exit the retry loop on non-IO exceptions
+                }
+            }
         }
         catch (Exception ex)
         {

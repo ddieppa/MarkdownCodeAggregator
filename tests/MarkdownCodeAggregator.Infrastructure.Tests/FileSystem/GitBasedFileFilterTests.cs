@@ -21,14 +21,12 @@ public class GitBasedFileFilterTests : IDisposable
         _commandExecutorMock = Substitute.For<ICommandExecutor>();
         _gitBasedFileFilter = new GitBasedFileFilter(_loggerMock, _fileSystemMock, _commandExecutorMock);
 
-        // Create a temporary directory for our tests
         _tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_tempDirectory);
     }
 
     public void Dispose()
     {
-        // Clean up the temporary directory after tests
         if (Directory.Exists(_tempDirectory))
         {
             Directory.Delete(_tempDirectory, true);
@@ -136,7 +134,7 @@ public class GitBasedFileFilterTests : IDisposable
         var filePath2 = Path.Combine(_tempDirectory, "file2.txt");
         var excludeFilePath = Path.Combine(_tempDirectory, ".gitignore");
 
-        await File.WriteAllTextAsync(excludeFilePath, "*.cs\n*.txt");
+        File.WriteAllText(excludeFilePath, "*.cs\n*.txt");
 
         // Act
         var result1 = await _gitBasedFileFilter.ShouldIncludeFileAsync(filePath1, _tempDirectory, excludeFilePath);
@@ -154,7 +152,7 @@ public class GitBasedFileFilterTests : IDisposable
         var filePath = Path.Combine(_tempDirectory, "file1.cs");
         var excludeFilePath = Path.Combine(_tempDirectory, ".gitignore");
 
-        await File.WriteAllTextAsync(excludeFilePath, "# This is a comment\n*.cs");
+        File.WriteAllText(excludeFilePath, "# This is a comment\n*.cs");
 
         // Act
         var result = await _gitBasedFileFilter.ShouldIncludeFileAsync(filePath, _tempDirectory, excludeFilePath);

@@ -25,10 +25,7 @@ public class CodeAggregator(
         var processedFileCount = 0;
         var totalTokens = 0;
 
-        aggregatedContent.AppendLine("# Code Aggregation Report");
-        aggregatedContent.AppendLine($"Source Directory: {sourceDirectory}");
-        aggregatedContent.AppendLine($"Total Files Found: {fileCount}");
-        aggregatedContent.AppendLine();
+        var codeContent = new StringBuilder();
 
         for (int i = 0; i < fileCount; i++)
         {
@@ -47,7 +44,7 @@ public class CodeAggregator(
                     var cleanContent = string.Join('\n', nonEmptyLines);
                     var relativePath = Path.GetRelativePath(sourceDirectory, file);
                     var codeFile = new CodeFile(new FilePath(relativePath), cleanContent);
-                    aggregatedContent.Append(formatter.FormatCode(codeFile));
+                    codeContent.Append(formatter.FormatCode(codeFile));
                     processedFileCount++;
                     totalTokens += tokenCounter.CountTokens(cleanContent);
                 }
@@ -55,17 +52,25 @@ public class CodeAggregator(
             catch (Exception ex)
             {
                 logger.Error(ex, "Error processing file: {File}", file);
-                aggregatedContent.AppendLine($"## Error processing file: {file}");
-                aggregatedContent.AppendLine($"```");
-                aggregatedContent.AppendLine(ex.ToString());
-                aggregatedContent.AppendLine($"```");
+                codeContent.AppendLine($"## Error processing file: {file}");
+                codeContent.AppendLine($"```");
+                codeContent.AppendLine(ex.ToString());
+                codeContent.AppendLine($"```");
             }
 
             progressCallback?.Invoke(Path.GetFileName(file), (i + 1.0) / fileCount);
         }
 
+        // Add report information at the beginning
+        aggregatedContent.AppendLine("# Code Aggregation Report");
+        aggregatedContent.AppendLine($"Source Directory: {sourceDirectory}");
+        aggregatedContent.AppendLine($"Total Files Found: {fileCount}");
         aggregatedContent.AppendLine($"Total Files Processed: {processedFileCount}");
         aggregatedContent.AppendLine($"Total Tokens: {totalTokens}");
+        aggregatedContent.AppendLine();
+
+        // Append the code content
+        aggregatedContent.Append(codeContent);
 
         return (aggregatedContent.ToString(), processedFileCount, totalTokens);
     }
