@@ -7,7 +7,10 @@ namespace MarkdownCodeAggregator.Application.Services;
 
 public class CodeAggregatorService(ICodeAggregator codeAggregator, ILogger logger) : ICodeAggregatorService
 {
-    public async Task<AggregationResult> AggregateCodeAsync(string sourceDirectory, string outputDirectory,
+    public async Task<AggregationResult> AggregateCodeAsync(
+            string sourceDirectory,
+            string outputDirectory,
+            string? excludeFilePath,
             Action<string, double>? progressCallback = null)
     {
         try
@@ -15,6 +18,7 @@ public class CodeAggregatorService(ICodeAggregator codeAggregator, ILogger logge
             var (aggregatedContent, fileCount, totalTokens) = await codeAggregator.AggregateCodeAsync(
                                                                       sourceDirectory,
                                                                       outputDirectory,
+                                                                      excludeFilePath,
                                                                       progressCallback);
 
             return new AggregationResult(aggregatedContent, totalTokens, fileCount);

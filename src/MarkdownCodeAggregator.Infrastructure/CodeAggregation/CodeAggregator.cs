@@ -16,9 +16,10 @@ public class CodeAggregator(
     public async Task<(string Content, int FileCount, int TotalTokens)> AggregateCodeAsync(
         string sourceDirectory,
         string outputDirectory,
+        string? excludeFilePath,
         Action<string, double>? progressCallback = null)
     {
-        var files = await GetCodeFilesAsync(sourceDirectory, outputDirectory);
+        var files = await GetCodeFilesAsync(sourceDirectory, outputDirectory, excludeFilePath);
         var aggregatedContent = new StringBuilder();
         var fileCount = files.Count;
         var processedFileCount = 0;
@@ -69,7 +70,7 @@ public class CodeAggregator(
         return (aggregatedContent.ToString(), processedFileCount, totalTokens);
     }
 
-    private async Task<List<string>> GetCodeFilesAsync(string sourceDirectory, string outputDirectory)
+    private async Task<List<string>> GetCodeFilesAsync(string sourceDirectory, string outputDirectory, string? excludeFilePath)
     {
         var allFiles = await fileFilter.GetTrackedFilesAsync(sourceDirectory);
         logger.Information("Total files found: {Count}", allFiles.Count());
@@ -77,7 +78,7 @@ public class CodeAggregator(
         var includedFiles = new List<string>();
         foreach (var file in allFiles)
         {
-            if (await ShouldIncludeFileAsync(file, sourceDirectory, outputDirectory))
+            if (await ShouldIncludeFileAsync(file, sourceDirectory, outputDirectory, excludeFilePath))
             {
                 includedFiles.Add(file);
             }
@@ -86,7 +87,7 @@ public class CodeAggregator(
         return includedFiles;
     }
 
-    private async Task<bool> ShouldIncludeFileAsync(string filePath, string sourceDirectory, string outputDirectory)
+    private async Task<bool> ShouldIncludeFileAsync(string filePath, string sourceDirectory, string outputDirectory, string? excludeFilePath)
     {
         if (Path.GetFullPath(filePath).StartsWith(Path.GetFullPath(outputDirectory)))
         {
@@ -94,6 +95,6 @@ public class CodeAggregator(
             return false;
         }
 
-        return await fileFilter.ShouldIncludeFileAsync(filePath, sourceDirectory);
+        return await fileFilter.ShouldIncludeFileAsync(filePath, sourceDirectory, excludeFilePath);
     }
 }
