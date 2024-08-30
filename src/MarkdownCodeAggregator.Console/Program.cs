@@ -7,6 +7,7 @@ using MarkdownCodeAggregator.Domain.Interfaces;
 using MarkdownCodeAggregator.Infrastructure.FileSystem;
 using MarkdownCodeAggregator.Infrastructure.Formatting;
 using MarkdownCodeAggregator.Infrastructure.CodeAggregation;
+using MarkdownCodeAggregator.Infrastructure.CommandExecution;
 using MarkdownCodeAggregator.Infrastructure.TokenCounting;
 using Serilog;
 
@@ -27,6 +28,7 @@ try
     builder.Services.AddSingleton<IFileFilter, GitBasedFileFilter>();
     builder.Services.AddSingleton<ICodeAggregator, CodeAggregator>();
     builder.Services.AddSingleton<ICodeAggregatorService, CodeAggregatorService>();
+    builder.Services.AddSingleton<ICommandExecutor, CliWrapCommandExecutor>();
     builder.Services.AddSingleton(Log.Logger);
 
     builder.Logging.AddSerilog();
