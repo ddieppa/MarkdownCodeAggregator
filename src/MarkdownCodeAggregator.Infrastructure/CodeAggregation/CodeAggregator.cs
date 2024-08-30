@@ -7,89 +7,93 @@ using Serilog;
 namespace MarkdownCodeAggregator.Infrastructure.CodeAggregation;
 
 public class CodeAggregator(
-        IFileSystem fileSystem,
-        IFormatter formatter,
-        ITokenCounter tokenCounter,
-        IGitignoreParser gitignoreParser,
-        ILogger logger)
-        : ICodeAggregator
+    IFileSystem fileSystem,
+    IFormatter formatter,
+    ITokenCounter tokenCounter,
+    IFileFilter fileFilter,
+    ILogger logger) : ICodeAggregator
 {
     public async Task<(string Content, int FileCount, int TotalTokens)> AggregateCodeAsync(
         string sourceDirectory,
         string outputDirectory,
-        string? excludeFilePath,
         Action<string, double>? progressCallback = null)
     {
-        var excludePatterns = await gitignoreParser.ParseAsync(excludeFilePath);
-        logger.Information("Exclude patterns: {@Patterns}", excludePatterns);
-
-        var files = GetCodeFiles(sourceDirectory, outputDirectory, excludePatterns).ToList();
-        var fileCount = files.Count;
-        var totalTokens = 0;
-        var processedFileCount = 0;
-
+        var files = await GetCodeFilesAsync(sourceDirectory, outputDirectory);
         var aggregatedContent = new StringBuilder();
-        aggregatedContent.AppendLine($"# Code Aggregation Report");
+        var fileCount = files.Count;
+        var processedFileCount = 0;
+        var totalTokens = 0;
+
+        aggregatedContent.AppendLine("# Code Aggregation Report");
         aggregatedContent.AppendLine($"Source Directory: {sourceDirectory}");
         aggregatedContent.AppendLine($"Total Files Found: {fileCount}");
+        aggregatedContent.AppendLine();
 
-        var processedFiles = await Task.WhenAll(files.Select(async (file, index) =>
+        for (int i = 0; i < fileCount; i++)
         {
+            var file = files[i];
             logger.Information("Processing file: {File}", file);
-            var content = await fileSystem.ReadAllTextAsync(file);
-            var nonEmptyLines = content.Split('\n')
-                .Where(line => !string.IsNullOrWhiteSpace(line))
-                .ToArray();
 
-            if (nonEmptyLines.Length > 0)
+            try
             {
-                var cleanContent = string.Join('\n', nonEmptyLines);
-                var relativePath = Path.GetRelativePath(sourceDirectory, file).Replace('\\', '/');
-                var codeFile = new CodeFile(new FilePath(relativePath), cleanContent);
-                var formattedContent = formatter.FormatCode(codeFile);
-                var tokens = tokenCounter.CountTokens(cleanContent);
+                var content = await fileSystem.ReadAllTextAsync(file);
+                var nonEmptyLines = content.Split('\n')
+                    .Where(line => !string.IsNullOrWhiteSpace(line))
+                    .ToArray();
 
-                progressCallback?.Invoke(Path.GetFileName(file), (index + 1.0) / fileCount);
-
-                return (FormattedContent: formattedContent, Tokens: tokens);
+                if (nonEmptyLines.Length > 0)
+                {
+                    var cleanContent = string.Join('\n', nonEmptyLines);
+                    var relativePath = Path.GetRelativePath(sourceDirectory, file);
+                    var codeFile = new CodeFile(new FilePath(relativePath), cleanContent);
+                    aggregatedContent.Append(formatter.FormatCode(codeFile));
+                    processedFileCount++;
+                    totalTokens += tokenCounter.CountTokens(cleanContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error processing file: {File}", file);
+                aggregatedContent.AppendLine($"## Error processing file: {file}");
+                aggregatedContent.AppendLine($"```");
+                aggregatedContent.AppendLine(ex.ToString());
+                aggregatedContent.AppendLine($"```");
             }
 
-            return (FormattedContent: string.Empty, Tokens: 0);
-        }));
-
-        foreach (var (formattedContent, tokens) in processedFiles.Where(f => !string.IsNullOrEmpty(f.FormattedContent)))
-        {
-            aggregatedContent.Append(formattedContent);
-            totalTokens += tokens;
-            processedFileCount++;
+            progressCallback?.Invoke(Path.GetFileName(file), (i + 1.0) / fileCount);
         }
 
-        aggregatedContent.Insert(aggregatedContent.ToString().IndexOf('\n') + 1,
-            $"Total Files Processed: {processedFileCount}\n" +
-            $"Total Tokens: {totalTokens}\n");
+        aggregatedContent.AppendLine($"Total Files Processed: {processedFileCount}");
+        aggregatedContent.AppendLine($"Total Tokens: {totalTokens}");
 
         return (aggregatedContent.ToString(), processedFileCount, totalTokens);
     }
 
-    private IEnumerable<string> GetCodeFiles(string sourceDirectory, string outputDirectory, IEnumerable<string> excludePatterns)
+    private async Task<List<string>> GetCodeFilesAsync(string sourceDirectory, string outputDirectory)
     {
-        var allFiles = fileSystem.GetFiles(sourceDirectory, "*.*", SearchOption.AllDirectories);
+        var allFiles = await fileFilter.GetTrackedFilesAsync(sourceDirectory);
         logger.Information("Total files found: {Count}", allFiles.Count());
-        return allFiles.Where(file => !ShouldIgnoreFile(file, sourceDirectory, outputDirectory, excludePatterns));
+
+        var includedFiles = new List<string>();
+        foreach (var file in allFiles)
+        {
+            if (await ShouldIncludeFileAsync(file, sourceDirectory, outputDirectory))
+            {
+                includedFiles.Add(file);
+            }
+        }
+
+        return includedFiles;
     }
 
-    private bool ShouldIgnoreFile(string filePath, string baseDirectory, string outputDirectory, IEnumerable<string> patterns)
+    private async Task<bool> ShouldIncludeFileAsync(string filePath, string sourceDirectory, string outputDirectory)
     {
-        var relativePath = Path.GetRelativePath(baseDirectory, filePath).Replace('\\', '/');
-
         if (Path.GetFullPath(filePath).StartsWith(Path.GetFullPath(outputDirectory)))
         {
             logger.Information("File {File} is in output directory, ignoring", filePath);
-            return true;
+            return false;
         }
 
-        var shouldIgnore = gitignoreParser.ShouldIgnore(relativePath, patterns);
-        logger.Information("File: {File}, RelativePath: {RelativePath}, ShouldIgnore: {ShouldIgnore}", filePath, relativePath, shouldIgnore);
-        return shouldIgnore;
+        return await fileFilter.ShouldIncludeFileAsync(filePath, sourceDirectory);
     }
 }

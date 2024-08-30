@@ -4,6 +4,7 @@ namespace MarkdownCodeAggregator.Application.Interfaces;
 
 public interface ICodeAggregatorService
 {
-    Task<AggregationResult> AggregateCodeAsync(string sourceDirectory, string outputDirectory, string? excludeFile,
+    Task<AggregationResult> AggregateCodeAsync(string sourceDirectory,
+            string outputDirectory,
             Action<string, double>? progressCallback = null);
 }
